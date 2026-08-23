@@ -1,0 +1,20 @@
+# NOTICE
+
+This plugin adapts code from the following open-source projects:
+
+- **dsh-drag-and-drop** (https://github.com/omdsh-dev/dsh-drag-and-drop),
+  BSD-3-Clause — path resolution (`locator.ts`), platform search
+  (`platform-search.ts`), fingerprinting (`fingerprint.ts`), protocol types,
+  drag overlay, path chooser, file:// URI parsing, and the locate RPC flow.
+
+- **dsh-drop-to-path** (https://github.com/loudMore/dsh-drop-to-path),
+  MIT — host import/copy route pattern, sendSession prototype patch pattern,
+  image re-dispatch for mixed drops, chip rail DOM injection with
+  MutationObserver rebuild.
+
+- **dsh-side-chat-plus-plus** (https://github.com/anzhaohao/dsh-side-chat-plus-plus),
+  MIT — build pipeline (scripts/build.mjs) and plugin bundle scaffolding.
+
+- **Bootstrap Icons** (https://icons.getbootstrap.com), MIT — file-type icon
+  glyphs vendored in src/client/icons.ts (filetype-pdf/doc/xls/ppt,
+  file-earmark-zip/play/music/code/text/file).

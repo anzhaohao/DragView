@@ -1,0 +1,50 @@
+{
+  "name": "dsh-drag-file",
+  "version": "0.1.0",
+  "description": "Codex 式拖拽文件：把本地文件拖进 DSH 聊天界面，按配置复制进工作区或解析真实路径，渲染成胶囊卡片发送（底层携带路径文本供纯文本模型读取）",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "drag-and-drop",
+    "file-path",
+    "attachment",
+    "cordis",
+    "plugin"
+  ],
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node --check src/client.js && node --check src/index.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "license": "MIT"
+}
