@@ -255,6 +255,8 @@ function setPillChangeListener(listener) {
 function changed() {
   renderPills();
   if (onChange) onChange();
+  if (fileQueue.length > 0) document.body.setAttribute("data-dsh-drag-file-pills", "1");
+  else document.body.removeAttribute("data-dsh-drag-file-pills");
 }
 function addPill(pill) {
   fileQueue.push(pill);
@@ -332,14 +334,14 @@ function renderPills() {
   bar.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 0";
   for (const item of fileQueue) {
     const pill = document.createElement("span");
-    pill.style.cssText = "position:relative;display:inline-flex;align-items:center;gap:9px;box-sizing:border-box;max-width:340px;height:36px;padding:0 10px 0 8px;border:1px solid var(--dsw-alias-line-normal, rgba(148,163,184,.35));background:var(--dsw-alias-surface-raised, rgba(148,163,184,.08));border-radius:10px;overflow:hidden;transition:border-color .12s ease,background-color .12s ease";
+    pill.style.cssText = "position:relative;display:inline-flex;align-items:center;gap:9px;box-sizing:border-box;max-width:340px;height:36px;padding:0 10px 0 8px;border:1px solid var(--dsw-alias-line-strong, rgba(148,163,184,.7));background:var(--dsw-alias-surface-raised, rgba(148,163,184,.14));border-radius:10px;overflow:hidden;transition:border-color .12s ease,background-color .12s ease";
     pill.addEventListener("mouseenter", () => {
-      pill.style.borderColor = "var(--dsw-alias-line-strong, rgba(148,163,184,.6))";
-      pill.style.background = "var(--dsw-alias-interactive-bg-hover, rgba(148,163,184,.14))";
+      pill.style.borderColor = "var(--dsw-alias-line-solid, rgba(203,213,225,.9))";
+      pill.style.background = "var(--dsw-alias-interactive-bg-hover, rgba(148,163,184,.22))";
     });
     pill.addEventListener("mouseleave", () => {
-      pill.style.borderColor = "var(--dsw-alias-line-normal, rgba(148,163,184,.35))";
-      pill.style.background = "var(--dsw-alias-surface-raised, rgba(148,163,184,.08))";
+      pill.style.borderColor = "var(--dsw-alias-line-strong, rgba(148,163,184,.7))";
+      pill.style.background = "var(--dsw-alias-surface-raised, rgba(148,163,184,.14))";
     });
     const tile = fileIconElement(item.name, 18);
     const name = document.createElement("span");
@@ -349,7 +351,7 @@ function renderPills() {
     const size = document.createElement("span");
     const formatted = formatSize(item.size);
     size.textContent = formatted;
-    size.style.cssText = "flex:none;font:11px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;color:var(--dsw-alias-fg-tertiary, #9aa7bd)";
+    size.style.cssText = "flex:none;font:11px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;color:var(--dsw-alias-fg-secondary, #cbd5e1)";
     const remove = document.createElement("button");
     remove.type = "button";
     remove.textContent = "\u2715";

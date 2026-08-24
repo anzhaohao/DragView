@@ -24,6 +24,10 @@ export function setPillChangeListener(listener: (() => void) | null): void {
 function changed(): void {
   renderPills()
   if (onChange) onChange()
+  // Signal other plugins (dsh-side-chat-plus-plus) that the pill rail is
+  // occupied, so their composer capsule can shift down and not overlap.
+  if (fileQueue.length > 0) document.body.setAttribute('data-dsh-drag-file-pills', '1')
+  else document.body.removeAttribute('data-dsh-drag-file-pills')
 }
 
 export function addPill(pill: Pill): void {
@@ -141,16 +145,16 @@ function renderPills(): void {
     const pill = document.createElement('span')
     pill.style.cssText = 'position:relative;display:inline-flex;align-items:center;gap:9px;' +
       'box-sizing:border-box;max-width:340px;height:36px;padding:0 10px 0 8px;' +
-      'border:1px solid var(--dsw-alias-line-normal, rgba(148,163,184,.35));' +
-      'background:var(--dsw-alias-surface-raised, rgba(148,163,184,.08));' +
+      'border:1px solid var(--dsw-alias-line-strong, rgba(148,163,184,.7));' +
+      'background:var(--dsw-alias-surface-raised, rgba(148,163,184,.14));' +
       'border-radius:10px;overflow:hidden;transition:border-color .12s ease,background-color .12s ease'
     pill.addEventListener('mouseenter', () => {
-      pill.style.borderColor = 'var(--dsw-alias-line-strong, rgba(148,163,184,.6))'
-      pill.style.background = 'var(--dsw-alias-interactive-bg-hover, rgba(148,163,184,.14))'
+      pill.style.borderColor = 'var(--dsw-alias-line-solid, rgba(203,213,225,.9))'
+      pill.style.background = 'var(--dsw-alias-interactive-bg-hover, rgba(148,163,184,.22))'
     })
     pill.addEventListener('mouseleave', () => {
-      pill.style.borderColor = 'var(--dsw-alias-line-normal, rgba(148,163,184,.35))'
-      pill.style.background = 'var(--dsw-alias-surface-raised, rgba(148,163,184,.08))'
+      pill.style.borderColor = 'var(--dsw-alias-line-strong, rgba(148,163,184,.7))'
+      pill.style.background = 'var(--dsw-alias-surface-raised, rgba(148,163,184,.14))'
     })
 
     const tile = fileIconElement(item.name, 18)
@@ -166,7 +170,7 @@ function renderPills(): void {
     const formatted = formatSize(item.size)
     size.textContent = formatted
     size.style.cssText = 'flex:none;font:11px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;' +
-      'color:var(--dsw-alias-fg-tertiary, #9aa7bd)'
+      'color:var(--dsw-alias-fg-secondary, #cbd5e1)'
 
     const remove = document.createElement('button')
     remove.type = 'button'
