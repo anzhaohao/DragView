@@ -332,14 +332,14 @@ function renderPills() {
   bar.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 0";
   for (const item of fileQueue) {
     const pill = document.createElement("span");
-    pill.style.cssText = "position:relative;display:inline-flex;align-items:center;gap:9px;box-sizing:border-box;max-width:340px;height:36px;padding:0 10px 0 8px;border:1px solid rgba(217,83,79,.5);background:rgba(217,83,79,.08);border-radius:10px;overflow:hidden;transition:border-color .12s ease,background-color .12s ease";
+    pill.style.cssText = "position:relative;display:inline-flex;align-items:center;gap:9px;box-sizing:border-box;max-width:340px;height:36px;padding:0 10px 0 8px;border:1px solid var(--dsw-alias-line-normal, rgba(148,163,184,.35));background:var(--dsw-alias-surface-raised, rgba(148,163,184,.08));border-radius:10px;overflow:hidden;transition:border-color .12s ease,background-color .12s ease";
     pill.addEventListener("mouseenter", () => {
-      pill.style.borderColor = "rgba(217,83,79,.85)";
-      pill.style.background = "rgba(217,83,79,.14)";
+      pill.style.borderColor = "var(--dsw-alias-line-strong, rgba(148,163,184,.6))";
+      pill.style.background = "var(--dsw-alias-interactive-bg-hover, rgba(148,163,184,.14))";
     });
     pill.addEventListener("mouseleave", () => {
-      pill.style.borderColor = "rgba(217,83,79,.5)";
-      pill.style.background = "rgba(217,83,79,.08)";
+      pill.style.borderColor = "var(--dsw-alias-line-normal, rgba(148,163,184,.35))";
+      pill.style.background = "var(--dsw-alias-surface-raised, rgba(148,163,184,.08))";
     });
     const tile = fileIconElement(item.name, 18);
     const name = document.createElement("span");
@@ -739,7 +739,11 @@ function apply(ctx) {
     const files = Array.prototype.slice.call(event.dataTransfer ? event.dataTransfer.files : []);
     const images = files.filter(isImageFile);
     const others = files.filter((file) => !isImageFile(file));
-    if (others.length === 0) return;
+    if (others.length === 0) {
+      dragDepth = 0;
+      overlay.setActive(false);
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     dragDepth = 0;
@@ -786,6 +790,13 @@ function apply(ctx) {
   const disposeRail = mountPillRail();
   const disposeStyle = injectRailStyle();
   setPillChangeListener(() => syncDraftSentinel(ctx));
+  const onAddPillEvent = (event) => {
+    const detail = event.detail;
+    if (!detail || typeof detail.path !== "string" || typeof detail.name !== "string") return;
+    addPill({ path: detail.path, name: detail.name, size: typeof detail.size === "number" ? detail.size : void 0 });
+  };
+  window.addEventListener("dsh-drag-file:add-pill", onAddPillEvent);
+  window.__dshDragFileActive = true;
   let removeSettingsSection = () => {
   };
   try {
@@ -807,6 +818,8 @@ function apply(ctx) {
     disposeRail();
     disposeStyle();
     setPillChangeListener(null);
+    window.removeEventListener("dsh-drag-file:add-pill", onAddPillEvent);
+    delete window.__dshDragFileActive;
     removeSettingsSection();
   }, "drag-file: client lifecycle");
 }

@@ -270,8 +270,14 @@ export function apply(ctx: ClientContext): void {
     const files = Array.prototype.slice.call(event.dataTransfer ? event.dataTransfer.files : []) as File[]
     const images = files.filter(isImageFile)
     const others = files.filter((file) => !isImageFile(file))
-    // Pure-image drop: let DSH handle it natively (rail, overlay close, everything).
-    if (others.length === 0) return
+    // Pure-image drop: let DSH handle it natively (rail, overlay close,
+    // everything) — but still close our own drop overlay and reset drag
+    // state so the "release to drop" surface never sticks after mouse-up.
+    if (others.length === 0) {
+      dragDepth = 0
+      overlay.setActive(false)
+      return
+    }
 
     event.preventDefault()
     event.stopPropagation()
@@ -336,6 +342,17 @@ export function apply(ctx: ClientContext): void {
   const disposeStyle = injectRailStyle()
   setPillChangeListener(() => syncDraftSentinel(ctx))
 
+  // Bridge for other plugins (e.g. dsh-side-chat-plus-plus): they can hand a
+  // resolved file reference to this pill rail by dispatching
+  // `dsh-drag-file:add-pill` with { path, name, size? }.
+  const onAddPillEvent = (event: Event): void => {
+    const detail = (event as CustomEvent<{ path?: unknown; name?: unknown; size?: unknown }>).detail
+    if (!detail || typeof detail.path !== 'string' || typeof detail.name !== 'string') return
+    addPill({ path: detail.path, name: detail.name, size: typeof detail.size === 'number' ? detail.size : undefined })
+  }
+  window.addEventListener('dsh-drag-file:add-pill', onAddPillEvent)
+  ;(window as unknown as { __dshDragFileActive?: boolean }).__dshDragFileActive = true
+
   // Native settings section in the DSH Settings shell (third-party pattern,
   // same as dsh-better-sidebar: component passed directly, label as a
   // function). Guarded: a settings-section failure must never take the rest
@@ -361,6 +378,8 @@ export function apply(ctx: ClientContext): void {
     disposeRail()
     disposeStyle()
     setPillChangeListener(null)
+    window.removeEventListener('dsh-drag-file:add-pill', onAddPillEvent)
+    delete (window as unknown as { __dshDragFileActive?: boolean }).__dshDragFileActive
     removeSettingsSection()
   }, 'drag-file: client lifecycle')
 }

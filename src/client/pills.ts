@@ -135,20 +135,22 @@ function renderPills(): void {
   bar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 0'
 
   for (const item of fileQueue) {
-    // Codex/ChatGPT card anatomy (per the reference screenshot): rounded
-    // card with a soft red border, small type icon, filename, size, remove.
+    // Codex/ChatGPT card anatomy: rounded card with a theme-coordinated
+    // border/fill (tracks the DSH surface tokens), small type icon, filename,
+    // size, remove.
     const pill = document.createElement('span')
     pill.style.cssText = 'position:relative;display:inline-flex;align-items:center;gap:9px;' +
       'box-sizing:border-box;max-width:340px;height:36px;padding:0 10px 0 8px;' +
-      'border:1px solid rgba(217,83,79,.5);background:rgba(217,83,79,.08);' +
+      'border:1px solid var(--dsw-alias-line-normal, rgba(148,163,184,.35));' +
+      'background:var(--dsw-alias-surface-raised, rgba(148,163,184,.08));' +
       'border-radius:10px;overflow:hidden;transition:border-color .12s ease,background-color .12s ease'
     pill.addEventListener('mouseenter', () => {
-      pill.style.borderColor = 'rgba(217,83,79,.85)'
-      pill.style.background = 'rgba(217,83,79,.14)'
+      pill.style.borderColor = 'var(--dsw-alias-line-strong, rgba(148,163,184,.6))'
+      pill.style.background = 'var(--dsw-alias-interactive-bg-hover, rgba(148,163,184,.14))'
     })
     pill.addEventListener('mouseleave', () => {
-      pill.style.borderColor = 'rgba(217,83,79,.5)'
-      pill.style.background = 'rgba(217,83,79,.08)'
+      pill.style.borderColor = 'var(--dsw-alias-line-normal, rgba(148,163,184,.35))'
+      pill.style.background = 'var(--dsw-alias-surface-raised, rgba(148,163,184,.08))'
     })
 
     const tile = fileIconElement(item.name, 18)
