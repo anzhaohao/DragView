@@ -1,13 +1,13 @@
 /**
- * dsh-drag-file — browser half.
+ * DragView — browser half of dsh-drag-file-preview.
  *
  * Drag a local file anywhere over the page:
  *   - image/* files → never intercepted; DSH handles them natively
  *     (thumbnail rail + message images).
  *   - everything else → per config:
- *       mode 'resolve'  resolve the real filesystem path (file:// URI fast
- *                       path, then host locator: workspace → system dirs →
- *                       index → bounded walk) without copying anything;
+ *       mode 'resolve'  ask the host locator to search workspace → system
+ *                       dirs → index → bounded walk, then prove file content
+ *                       before receiving a registered attachment;
  *       mode 'copy'     upload the bytes to the host, which writes them into
  *                       <workspace>/<dropDir>/ and returns the copy path.
  *   The resolved path becomes a Codex-style pill in the composer rail. The
@@ -25,12 +25,30 @@
  * renders Codex-style file pills instead of plain text paths.
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import { CONFIG_ROUTE, COPY_ROUTE, type DragFileConfig } from '../protocol.js'
+import {
+  CONFIG_ROUTE,
+  COPY_ROUTE,
+  REVOKE_ROUTE,
+  type DragFileConfig,
+  type RegisteredFile,
+} from '../protocol.js'
 import { choosePath } from './chooser.js'
-import { locateDroppedFile } from './locator.js'
-import { pathsFromDrop } from './paths.js'
-import { addPill, clearPills, fileQueue, injectRailStyle, mountPillRail, setPillChangeListener } from './pills.js'
+import { chooseLocatedFile, locateDroppedFile } from './locator.js'
+import {
+  addPill,
+  clearPills,
+  fileQueue,
+  injectRailStyle,
+  mountPillRail,
+  pillsList,
+  refreshPills,
+  setActiveSessionProvider,
+  setPillChangeListener,
+  setPillDisposeListener,
+} from './pills.js'
+import { closeActivePreview, notifyUser } from './preview.js'
 import { DragFileSettingsSection } from './settings-section.js'
+import { acknowledgeRegisteredExport, DRAG_FILE_BRIDGE_VERSION } from './export-bridge.js'
 
 export const inject = ['conversation', 'sessions', 'workspaces', 'slots']
 
@@ -59,23 +77,11 @@ function isImageFile(file: File): boolean {
   return !!file && typeof file.type === 'string' && file.type.indexOf('image/') === 0
 }
 
-function basenameOf(path: string): string {
-  const parts = path.split(/[\\/]/)
-  return parts.at(-1) ?? path
-}
-
-/** Workspace path of the given (or current) session, from the sessions service. */
-function currentWorkspace(sessions: unknown, sessionId?: string): string | undefined {
+function currentSessionId(sessions: unknown): string | undefined {
   try {
-    const state = (sessions as { list?: { getSnapshot?: () => { current?: string; byId?: Record<string, { cwd?: string }> } } })
-      ?.list?.getSnapshot?.()
-    if (!state) return undefined
-    const id = sessionId || state.current
-    if (!id) return undefined
-    const row = state.byId ? state.byId[id] : undefined
-    return row && typeof row.cwd === 'string' && row.cwd.length > 0 ? row.cwd : undefined
-  } catch { /* best-effort */ }
-  return undefined
+    const id = (sessions as { list?: { getSnapshot?: () => { current?: string } } })?.list?.getSnapshot?.().current
+    return typeof id === 'string' && id.length > 0 ? id : undefined
+  } catch { return undefined }
 }
 
 function toBase64(buffer: ArrayBuffer): string {
@@ -89,42 +95,39 @@ function toBase64(buffer: ArrayBuffer): string {
 }
 
 /** Upload one file to the host and resolve its workspace drop-copy path. */
-async function copyFileToWorkspace(file: File, workspace?: string): Promise<string> {
+async function copyFileToWorkspace(file: File, sessionId: string): Promise<RegisteredFile> {
   const buffer = await file.arrayBuffer()
-  const payload: Record<string, unknown> = { name: file.name, dataBase64: toBase64(buffer) }
-  if (workspace && workspace.length > 0) payload.workspace = workspace
+  const payload: Record<string, unknown> = { name: file.name, dataBase64: toBase64(buffer), sessionId }
   const response = await fetch(COPY_ROUTE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  const result = await response.json() as { ok?: boolean; error?: { message?: string }; value?: { path?: string } }
+  const result = await response.json() as { ok?: boolean; error?: { message?: string }; value?: RegisteredFile }
   if (!response.ok || !result.ok) {
     throw new Error(result.error && result.error.message ? result.error.message : 'copy failed')
   }
-  const path = result.value && result.value.path
-  if (typeof path !== 'string' || path.length === 0) throw new Error('copy returned no path')
-  return path
+  if (!result.value || typeof result.value.id !== 'string' || typeof result.value.ref !== 'string') throw new Error('copy returned no registered file')
+  return result.value
 }
 
 /**
- * Resolve one non-image dropped file to an absolute path. Uses the
- * file:// URI fast path when exactly one payload path matches the basename
- * (captured synchronously — DataTransfer is dead after the drop handler
- * returns); otherwise drives the host locator through metadata → sample →
- * full phases, showing the chooser when candidates stay ambiguous.
+ * Resolve one non-image dropped file through the host-owned locator. The
+ * browser sends metadata and content proofs only, then shows the chooser if
+ * host-held candidates remain ambiguous after metadata → sample → full.
  */
 async function resolveFile(
-  ctx: ClientContext,
   file: File,
-  workspace: string | undefined,
-  directPaths: readonly string[],
-): Promise<string | undefined> {
-  const direct = directPaths.filter((path) => basenameOf(path) === file.name)
-  if (direct.length === 1) return direct[0]
-  const result = await locateDroppedFile(file, ctx.workspaces, workspace)
-  if (result.status === 'found') return result.path
-  if (result.status === 'choose') return choosePath(file.name, result.candidates)
+  sessionId: string,
+): Promise<RegisteredFile | undefined> {
+  let result = await locateDroppedFile(file, sessionId)
+  if (result.status === 'found') return result.file
+  if (result.status === 'choose') {
+    const choiceId = await choosePath(file.name, result.choices)
+    if (choiceId === undefined) return undefined
+    result = await chooseLocatedFile(result.resolutionId, choiceId)
+    if (result.status === 'found') return result.file
+  }
   if (result.status === 'error') throw new Error(result.message)
   return undefined
 }
@@ -194,7 +197,8 @@ function syncDraftSentinel(ctx: ClientContext): void {
     const input = currentInput(ctx)
     if (!input) return
     const draft = input.state.getSnapshot().draft
-    if (fileQueue.length > 0) {
+    const sessionId = currentSessionId(ctx.sessions)
+    if (sessionId !== undefined && pillsList(sessionId).length > 0) {
       if (draft.trim() === '') input.setDraft(SENTINEL)
     } else if (draft === SENTINEL) {
       input.setDraft('')
@@ -203,7 +207,7 @@ function syncDraftSentinel(ctx: ClientContext): void {
 }
 
 /** Wrap conversation.sendSession on the prototype: pills → `@"path"` mentions. */
-function patchSendSession(conversation: unknown): void {
+function patchSendSession(ctx: ClientContext, conversation: unknown): void {
   const proto = (conversation as { constructor?: { prototype?: Record<string, unknown> } })?.constructor?.prototype
   if (!proto || typeof proto.sendSession !== 'function' || proto[PATCH_MARK]) return
   proto[PATCH_MARK] = true
@@ -211,7 +215,9 @@ function patchSendSession(conversation: unknown): void {
   const original = proto.sendSession as (...args: unknown[]) => Promise<unknown>
   // eslint-disable-next-line @typescript-eslint/no-this-alias
   proto.sendSession = async function (this: unknown, session: unknown, text: string, imageIds: string[] | undefined, mode: unknown, signal: unknown) {
-    const filePaths = fileQueue.map((item) => item.path)
+    const sessionId = currentSessionId(ctx.sessions)
+    const queued = sessionId === undefined ? [] : pillsList(sessionId)
+    const filePaths = queued.map((item) => item.ref)
     if (filePaths.length === 0) return original.call(this, session, text, imageIds, mode, signal)
 
     const controller = this as {
@@ -239,7 +245,7 @@ function patchSendSession(conversation: unknown): void {
       .prompt?.(content, mode, signal)
     if (!result?.ok) return { kind: 'error' }
     if (typeof controller.releaseDraftImages === 'function') controller.releaseDraftImages(attachments)
-    clearPills() // only on success — a failed send keeps the pills
+    clearPills(sessionId) // only on success — a failed send keeps the pills
     return { kind: 'success' }
   }
 }
@@ -284,10 +290,11 @@ export function apply(ctx: ClientContext): void {
     dragDepth = 0
     overlay.setActive(false)
 
-    // Capture the file:// URI payload synchronously — DataTransfer is dead
-    // as soon as this handler returns.
-    const directPaths = pathsFromDrop(event.dataTransfer as DataTransfer)
-    const workspace = currentWorkspace(ctx.sessions)
+    const sessionId = currentSessionId(ctx.sessions)
+    if (sessionId === undefined) {
+      notifyUser('当前会话没有可用的工作区，无法添加文件。')
+      return
+    }
     const target = event.target as EventTarget | null
 
     // Mixed drop: re-dispatch the images as a pure-image drop (the rule above
@@ -316,14 +323,16 @@ export function apply(ctx: ClientContext): void {
 
     for (const file of others) {
       const work = config.mode === 'copy'
-        ? copyFileToWorkspace(file, workspace)
-        : resolveFile(ctx, file, workspace, directPaths)
-      work.then((path) => {
-        // Unresolvable drops are skipped silently (no notice): the pill just
-        // never appears. Failures are logged to the console only.
-        if (path !== undefined) addPill({ path, name: file.name, size: file.size })
+        ? copyFileToWorkspace(file, sessionId)
+        : resolveFile(file, sessionId)
+      work.then((registered) => {
+        if (registered === undefined) {
+          notifyUser(`没有找到“${file.name}”的原始文件。`)
+          return
+        }
+        addPill({ ...registered, sessionId })
       }).catch((error) => {
-        console.error('[dsh-drag-file] file processing failed:', error)
+        notifyUser(error instanceof Error ? error.message : '文件处理失败')
       })
     }
   }
@@ -337,21 +346,42 @@ export function apply(ctx: ClientContext): void {
   window.addEventListener('drop', onDrop, true)
 
   const conversation = ctx.get('conversation')
-  if (conversation) patchSendSession(conversation)
+  if (conversation) patchSendSession(ctx, conversation)
+  setActiveSessionProvider(() => currentSessionId(ctx.sessions))
   const disposeRail = mountPillRail()
   const disposeStyle = injectRailStyle()
   setPillChangeListener(() => syncDraftSentinel(ctx))
+  const revokeTokens = (items: readonly { readonly id: string; readonly sessionId: string }[], keepalive = false): void => {
+    if (items.length === 0) return
+    const groups = new Map<string, string[]>()
+    for (const item of items) groups.set(item.sessionId, [...(groups.get(item.sessionId) ?? []), item.id])
+    for (const [sessionId, ids] of groups) {
+    const body = JSON.stringify({ sessionId, ids })
+    if (keepalive && typeof navigator.sendBeacon === 'function') {
+      const sent = navigator.sendBeacon(REVOKE_ROUTE, new Blob([body], { type: 'application/json' }))
+      if (sent) continue
+    }
+    void fetch(REVOKE_ROUTE, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body, keepalive,
+    }).catch(() => undefined)
+    }
+  }
+  setPillDisposeListener((items) => revokeTokens(items))
+  const onPageHide = (): void => revokeTokens(fileQueue, true)
+  window.addEventListener('pagehide', onPageHide)
 
-  // Bridge for other plugins (e.g. dsh-side-chat-plus-plus): they can hand a
-  // resolved file reference to this pill rail by dispatching
-  // `dsh-drag-file:add-pill` with { path, name, size? }.
+  const sessionList = ctx.sessions.list as unknown as { subscribe?: (listener: () => void) => (() => void) }
+  const disposeSessionListener = sessionList.subscribe?.(() => { refreshPills(); syncDraftSentinel(ctx) }) ?? (() => {})
+
+  // Bridge for other host-integrated plugins (e.g. side-chat). It only accepts
+  // an attachment already registered by dshDragFileHost. Browser paths/content
+  // can never mint file access authority.
   const onAddPillEvent = (event: Event): void => {
-    const detail = (event as CustomEvent<{ path?: unknown; name?: unknown; size?: unknown }>).detail
-    if (!detail || typeof detail.path !== 'string' || typeof detail.name !== 'string') return
-    addPill({ path: detail.path, name: detail.name, size: typeof detail.size === 'number' ? detail.size : undefined })
+    const sessionId = currentSessionId(ctx.sessions)
+    acknowledgeRegisteredExport(event, sessionId, addPill)
   }
   window.addEventListener('dsh-drag-file:add-pill', onAddPillEvent)
-  ;(window as unknown as { __dshDragFileActive?: boolean }).__dshDragFileActive = true
+  ;(window as unknown as { __dshDragFileBridgeVersion?: number }).__dshDragFileBridgeVersion = DRAG_FILE_BRIDGE_VERSION
 
   // Native settings section in the DSH Settings shell (third-party pattern,
   // same as dsh-better-sidebar: component passed directly, label as a
@@ -363,7 +393,7 @@ export function apply(ctx: ClientContext): void {
       name: 'settings.section',
       id: 'drag-file',
       order: 100,
-      label: () => '拖拽文件设置',
+      label: () => 'DragView 文件附件设置',
     }, DragFileSettingsSection))
   } catch (error) {
     console.warn('[dsh-drag-file] settings section registration failed:', error)
@@ -374,12 +404,20 @@ export function apply(ctx: ClientContext): void {
     window.removeEventListener('dragover', onDragOver)
     window.removeEventListener('dragleave', onDragLeave)
     window.removeEventListener('drop', onDrop, true)
+    window.removeEventListener('pagehide', onPageHide)
     overlay.dispose()
+    revokeTokens(fileQueue, true)
+    setPillDisposeListener(null)
+    clearPills()
     disposeRail()
     disposeStyle()
     setPillChangeListener(null)
+    setActiveSessionProvider(null)
+    disposeSessionListener()
     window.removeEventListener('dsh-drag-file:add-pill', onAddPillEvent)
-    delete (window as unknown as { __dshDragFileActive?: boolean }).__dshDragFileActive
+    closeActivePreview()
+    document.querySelector('[data-drag-file-notice]')?.remove()
+    delete (window as unknown as { __dshDragFileBridgeVersion?: number }).__dshDragFileBridgeVersion
     removeSettingsSection()
   }, 'drag-file: client lifecycle')
 }

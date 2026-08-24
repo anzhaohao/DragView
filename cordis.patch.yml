@@ -1,4 +1,4 @@
-# dsh-drag-file bundle patch: mount the drag-file plugin.
+# DragView (dsh-drag-file-preview) bundle patch.
 #
 # The host half (package root) registers the resolve/copy/config HTTP routes
 # and the settings section; the browser half (dsh.client) is discovered
@@ -6,4 +6,4 @@
 
 - insert:
     - id: drag-file
-      name: dsh-drag-file
+      name: dsh-drag-file-preview

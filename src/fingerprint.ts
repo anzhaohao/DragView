@@ -3,7 +3,7 @@
  * Adapted from omdsh-dev/dsh-drag-and-drop (BSD-3-Clause).
  */
 import { createHash } from 'node:crypto'
-import { open } from 'node:fs/promises'
+import { open, stat } from 'node:fs/promises'
 import { SAMPLE_BYTES } from './protocol.js'
 
 function sampleRanges(size: number): Array<{ start: number; length: number }> {
@@ -41,9 +41,13 @@ export async function sampleFingerprint(path: string, size: number): Promise<str
 }
 
 export async function fullFingerprint(path: string): Promise<string> {
+  const size = (await stat(path)).size
   const handle = await open(path, 'r')
   try {
     const hash = createHash('sha256')
+    const header = Buffer.allocUnsafe(8)
+    header.writeBigUInt64BE(BigInt(size))
+    hash.update(header)
     const buffer = Buffer.allocUnsafe(256 * 1024)
     let position = 0
     while (true) {

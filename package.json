@@ -1,16 +1,33 @@
 {
-  "name": "dsh-drag-file",
+  "name": "dsh-drag-file-preview",
   "version": "0.1.0",
-  "description": "Codex 式拖拽文件：把本地文件拖进 DSH 聊天界面，按配置复制进工作区或解析真实路径，渲染成胶囊卡片发送（底层携带路径文本供纯文本模型读取）",
+  "description": "DragView：为 DeepSeek Harness 提供拖拽文件、Codex 风格附件卡片、安全文件预览与系统打开能力",
   "keywords": [
     "deepseek-harness",
     "dsh",
+    "drag",
     "drag-and-drop",
+    "drag-file",
+    "file-drag",
+    "file-preview",
+    "pdf-preview",
+    "video-preview",
+    "audio-preview",
     "file-path",
     "attachment",
+    "file-attachment",
+    "codex-style",
     "cordis",
     "plugin"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anzhaohao/dsh-drag-file-preview.git"
+  },
+  "homepage": "https://github.com/anzhaohao/dsh-drag-file-preview#readme",
+  "bugs": {
+    "url": "https://github.com/anzhaohao/dsh-drag-file-preview/issues"
+  },
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -29,7 +46,8 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node --check src/client.js && node --check src/index.js"
+    "check": "node --check src/client.js && node --check src/index.js && node --check src/file-access.js && node --check src/side-chat-bridge.js && node --check src/fingerprint.js && node --check src/client-fingerprint.js && node --check src/client-export-bridge.js && node --check src/client/rail-fixture.js && node --check src/client/preview-fixture.js",
+    "test": "node scripts/test-security.mjs && node scripts/test-rail-fixture.mjs"
   },
   "dsh": {
     "bundle": {

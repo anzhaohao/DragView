@@ -1,5 +1,5 @@
 /**
- * dsh-drag-file settings section, rendered natively in the DSH Settings
+ * DragView settings section, rendered natively in the DSH Settings
  * shell through the `settings.section` slot (the third-party plugin pattern,
  * same as dsh-better-sidebar). Persists through the plugin's own fenced
  * routes: GET/POST /file-drop/settings on the host webServer.

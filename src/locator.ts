@@ -14,8 +14,7 @@ import { basename, join, normalize, resolve, sep } from 'node:path'
 import { readdir, stat } from 'node:fs/promises'
 import { fullFingerprint, sampleFingerprint } from './fingerprint.js'
 import { broadSearchRoots, indexedSearch } from './platform-search.js'
-import type { DroppedFileMeta, LocateRequest, LocateResponse } from './protocol.js'
-import { SMALL_FILE_BYTES } from './protocol.js'
+import type { DroppedFileMeta } from './protocol.js'
 
 const MAX_CANDIDATES = 100
 const MAX_WALK_ENTRIES = 20_000
@@ -23,7 +22,7 @@ const WALK_DEPTH = 12
 /** Per-root cap on direct subdirectories expanded by the depth-3 fast path. */
 const SHALLOW_MAX_DIRS = 4096
 
-interface Candidate {
+export interface Candidate {
   readonly path: string
   readonly mtimeMs: number
 }
@@ -116,9 +115,12 @@ function pathsInside(paths: readonly string[], roots: readonly string[]): string
   })
 }
 
-async function metadataCandidates(item: DroppedFileMeta, request: LocateRequest): Promise<Candidate[]> {
-  const current = request.currentWorkspacePath
-  const workspaceRoots = [...new Set(request.workspacePaths ?? [])].filter((root) => typeof root === 'string' && root !== '')
+export async function metadataCandidates(
+  item: DroppedFileMeta,
+  current: string | undefined,
+  registeredWorkspaceRoots: readonly string[],
+): Promise<Candidate[]> {
+  const workspaceRoots = [...new Set(registeredWorkspaceRoots)].filter((root) => typeof root === 'string' && root !== '')
   const otherWorkspaces = workspaceRoots.filter((root) => root !== current)
   const commonRoots = [join(homedir(), 'Desktop'), join(homedir(), 'Documents'), join(homedir(), 'Downloads')]
 
@@ -137,7 +139,7 @@ async function metadataCandidates(item: DroppedFileMeta, request: LocateRequest)
   return recursiveCandidates(item, await broadSearchRoots())
 }
 
-async function matchingFileDigest(candidates: readonly string[], digest: string, phase: 'sample' | 'full', file: DroppedFileMeta): Promise<string[]> {
+export async function matchingFileDigest(candidates: readonly string[], digest: string, phase: 'sample' | 'full', file: DroppedFileMeta): Promise<string[]> {
   const matched: string[] = []
   for (const path of candidates.slice(0, MAX_CANDIDATES)) {
     try {
@@ -148,24 +150,8 @@ async function matchingFileDigest(candidates: readonly string[], digest: string,
   return matched
 }
 
-export async function locate(request: LocateRequest): Promise<LocateResponse> {
-  const file = request.file
-  if (file.name === '') return { status: 'error', message: 'invalid dropped file metadata' }
-  if (!Number.isSafeInteger(file.size) || file.size < 0) return { status: 'error', message: 'invalid dropped-file metadata' }
-
-  if (request.phase === 'metadata') {
-    const candidates = await metadataCandidates(file, request)
-    if (candidates.length === 0) return { status: 'not-found' }
-    if (candidates.length === 1) return { status: 'found', path: candidates[0].path }
-    return { status: 'sample-required', candidates: candidates.map((candidate) => candidate.path) }
-  }
-  if ((request.phase !== 'sample' && request.phase !== 'full') || request.digest === undefined || request.candidates === undefined) {
-    return { status: 'error', message: 'digest phase requires candidates and digest' }
-  }
-  const matched = await matchingFileDigest(request.candidates, request.digest, request.phase, file)
-  if (matched.length === 0) return { status: 'not-found' }
-  if (matched.length === 1) return { status: 'found', path: matched[0] }
-  if (request.phase === 'sample' && file.size <= SMALL_FILE_BYTES) return { status: 'choose', candidates: matched }
-  if (request.phase === 'sample') return { status: 'full-required', candidates: matched }
-  return { status: 'choose', candidates: matched }
+export function validDroppedFile(file: DroppedFileMeta): boolean {
+  return file?.kind === 'file' && typeof file.name === 'string' && file.name !== ''
+    && Number.isSafeInteger(file.size) && file.size >= 0
+    && Number.isFinite(file.lastModified) && file.lastModified >= 0
 }

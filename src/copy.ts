@@ -3,9 +3,8 @@
  * Adapted from loudMore/dsh-drop-to-path (MIT): same timestamped safe-name
  * scheme, but no extension allowlist — dsh-drag-file accepts any file type.
  */
-import { mkdir, writeFile } from 'node:fs/promises'
-import { basename, isAbsolute, join } from 'node:path'
-import { homedir } from 'node:os'
+import { basename, isAbsolute } from 'node:path'
+import { assertContainedFile, ensureContainedDirectory, writeUniqueFile } from './file-access.js'
 
 export const MAX_COPY_BYTES = 100 * 1024 * 1024
 
@@ -33,24 +32,8 @@ export async function copyBytesToDropDir(
 ): Promise<{ path: string; filename: string }> {
   if (!isAbsolute(root)) throw new Error(`workspace root must be absolute, got "${root}"`)
   const safe = safeName(rawName)
-  const dir = join(root, dropDir)
-  await mkdir(dir, { recursive: true })
-  const target = join(dir, `${Date.now()}-${safe}`)
-  await writeFile(target, bytes)
-  return { path: target, filename: basename(target) }
-}
-
-/**
- * Fallback workspace root when the client payload carries none: prefer the
- * durable workspace registry via DSH_HOME, then well-known harness homes.
- * Best-effort — the client normally sends the absolute session cwd.
- */
-export async function fallbackWorkspaceRoot(registryList: (() => Array<{ path?: string }>) | undefined): Promise<string> {
-  if (registryList) {
-    const roots = registryList()
-    const first = roots.find((root) => typeof root?.path === 'string' && isAbsolute(root.path))
-    if (first) return first.path as string
-  }
-  const home = process.env.DSH_HOME || join(homedir(), '.dsh')
-  throw new Error(`no workspace available (checked registry and ${home})`)
+  const { root: canonicalRoot, directory } = await ensureContainedDirectory(root, dropDir)
+  const target = await writeUniqueFile(directory, safe, bytes)
+  const canonicalTarget = await assertContainedFile(canonicalRoot, target)
+  return { path: canonicalTarget, filename: basename(canonicalTarget) }
 }

@@ -5,15 +5,15 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const project = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const temp = mkdtempSync(join(tmpdir(), 'dsh-drag-file-'))
+const temp = mkdtempSync(join(tmpdir(), 'dsh-drag-file-preview-'))
 
-const PLUGIN_ID = 'dsh-drag-file'
+const PLUGIN_ID = 'dsh-drag-file-preview'
 
 function quote(value) {
   return `"${value.replaceAll('"', '""')}"`
 }
 
-function runEsbuild(entry, outfile, { format, platform, external, banner, footer } = {}) {
+function runEsbuild(entry, outfile, { format, platform, external, banner, footer, globalName } = {}) {
   const args = [
     'npx.cmd',
     '--yes',
@@ -27,6 +27,7 @@ function runEsbuild(entry, outfile, { format, platform, external, banner, footer
     '--loader:.tsx=tsx',
     '--loader:.ts=ts',
     '--loader:.css=text',
+    ...(globalName ? [quote(`--global-name=${globalName}`)] : []),
     ...(external ?? []).map((value) => quote(`--external:${value}`)),
     ...(banner ? [quote(`--banner:js=${banner}`)] : []),
     ...(footer ? [quote(`--footer:js=${footer}`)] : []),
@@ -36,6 +37,43 @@ function runEsbuild(entry, outfile, { format, platform, external, banner, footer
 }
 
 try {
+  runEsbuild(resolve(project, 'src/fingerprint.ts'), resolve(project, 'src/fingerprint.js'), {
+    format: 'esm',
+    platform: 'node',
+    external: ['node:*'],
+  })
+  runEsbuild(resolve(project, 'src/client/fingerprint.ts'), resolve(project, 'src/client-fingerprint.js'), {
+    format: 'esm',
+    platform: 'browser',
+  })
+  runEsbuild(resolve(project, 'src/client/rail.ts'), resolve(project, 'src/client/rail-fixture.js'), {
+    format: 'iife',
+    platform: 'browser',
+    globalName: '__DshDragFileRailFixture',
+  })
+  runEsbuild(resolve(project, 'src/client/preview.ts'), resolve(project, 'src/client/preview-fixture.js'), {
+    format: 'iife',
+    platform: 'browser',
+    globalName: '__DshDragFilePreviewFixture',
+  })
+  runEsbuild(resolve(project, 'src/client/export-bridge.ts'), resolve(project, 'src/client-export-bridge.js'), {
+    format: 'esm',
+    platform: 'browser',
+  })
+  // Emit pure Node helpers first. Source imports use runtime `.js` specifiers,
+  // so this ordering also prevents a prior generated helper from going stale
+  // when the host entry is bundled again.
+  runEsbuild(resolve(project, 'src/file-access.ts'), resolve(project, 'src/file-access.js'), {
+    format: 'esm',
+    platform: 'node',
+    external: ['node:*'],
+  })
+  runEsbuild(resolve(project, 'src/side-chat-bridge.ts'), resolve(project, 'src/side-chat-bridge.js'), {
+    format: 'esm',
+    platform: 'node',
+    external: ['node:*'],
+  })
+
   // 1) Host (Node, ESM). @deepseek-ai/* and node builtins stay external
   //    (resolved by the DSH host, same as the reference plugins).
   runEsbuild(resolve(project, 'src/index.ts'), resolve(project, 'src/index.js'), {

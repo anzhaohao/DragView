@@ -3,11 +3,13 @@
  * Adapted from omdsh-dev/dsh-drag-and-drop (BSD-3-Clause).
  */
 
-export function choosePath(name: string, candidates: readonly string[]): Promise<string | undefined> {
+export interface SafeChoice { readonly id: string; readonly label: string }
+
+export function choosePath(name: string, choices: readonly SafeChoice[]): Promise<string | undefined> {
   return new Promise((resolve) => {
     const backdrop = document.createElement('div')
     Object.assign(backdrop.style, {
-      position: 'fixed', inset: '0', zIndex: '2147483647', display: 'grid', placeItems: 'center',
+      position: 'fixed', inset: '0', zIndex: '2147483600', display: 'grid', placeItems: 'center',
       padding: '24px', background: 'rgb(15 23 42 / 35%)',
     })
     const panel = document.createElement('div')
@@ -22,17 +24,17 @@ export function choosePath(name: string, candidates: readonly string[]): Promise
     Object.assign(title.style, { margin: '0 0 14px', fontSize: '16px', letterSpacing: '0' })
     panel.append(title)
 
-    const finish = (path?: string): void => { backdrop.remove(); resolve(path) }
-    for (const path of candidates) {
+    const finish = (choiceId?: string): void => { backdrop.remove(); resolve(choiceId) }
+    for (const choice of choices) {
       const button = document.createElement('button')
       button.type = 'button'
-      button.textContent = path
+      button.textContent = choice.label
       Object.assign(button.style, {
         display: 'block', width: '100%', margin: '8px 0', padding: '10px 12px', textAlign: 'left',
         border: '1px solid #cbd5e1', borderRadius: '6px', background: '#f8fafc', color: '#0f172a',
         cursor: 'pointer', overflowWrap: 'anywhere', letterSpacing: '0',
       })
-      button.addEventListener('click', () => { finish(path) })
+      button.addEventListener('click', () => { finish(choice.id) })
       panel.append(button)
     }
     const cancel = document.createElement('button')
