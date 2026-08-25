@@ -1,8 +1,8 @@
-# DragView — dsh-drag-file-preview
+# DragView — dsh-dragview
 
 **DragView** 是 DSH 的拖拽文件与预览插件：把本地文件拖进聊天界面，按配置**复制进工作区**或**只解析真实路径**，在输入框中渲染成 **Codex** 风格附件卡片，并安全预览或用系统默认应用打开——**不把路径显示给用户**。
 
-项目与 npm 包名为 `dsh-drag-file-preview`，便于在 GitHub 和 DSH 插件市场通过 `drag`、`file`、`preview` 或 `attachment` 检索。
+GitHub 仓库名为 `DragView`，npm 与 DSH 包名为 `dsh-dragview`；品牌与 `drag` 搜索词同时保留，便于在 GitHub 和 DSH 插件市场检索。
 
 ## 两种模式（设置里切换，重启生效）
 
@@ -57,7 +57,7 @@ npm test               # token/路径约束/Range/MIME/open argv/side 内容桥�
 把包同步到 web profile：
 
 ```text
-~/.hanako/plugin-data/dsh-hanako/dsh-home/profiles/web/node_modules/dsh-drag-file-preview/
+~/.hanako/plugin-data/dsh-hanako/dsh-home/profiles/web/node_modules/dsh-dragview/
   ├── src/            # 构建产物
   ├── package.json
   └── cordis.patch.yml
@@ -68,14 +68,14 @@ npm test               # token/路径约束/Range/MIME/open argv/side 内容桥�
 ```yaml
 - insert:
     - id: drag-file
-      name: dsh-drag-file-preview
+      name: dsh-dragview
 ```
 
 客户端刷新页面即生效；host 端改动需重启 `dsh web`。
 
-发布到 npm 后可直接 `dsh plugin add dsh-drag-file-preview`（dsh 字段 + `dsh.bundle.patch` 已声明）。
+发布到 npm 后可直接 `dsh plugin add dsh-dragview`（dsh 字段 + `dsh.bundle.patch` 已声明）。
 
-> 注：npm 上的 `dsh-drag-file` 是其他维护者的既有包，不是 DragView；请使用完整包名 `dsh-drag-file-preview`。GitHub 仓库改名后通常会为旧 URL 保留跳转，但 npm 包名不支持别名。
+> 注：npm 上的 `dsh-drag-file` 是其他维护者的既有包，不是 DragView；请使用完整包名 `dsh-dragview`。GitHub 仓库改名后通常会为旧 URL 保留跳转，但 npm 包名不支持别名。
 
 ## 兼容性标识
 

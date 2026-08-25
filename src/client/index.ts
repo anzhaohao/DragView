@@ -1,5 +1,5 @@
 /**
- * DragView — browser half of dsh-drag-file-preview.
+ * DragView — browser half of dsh-dragview.
  *
  * Drag a local file anywhere over the page:
  *   - image/* files → never intercepted; DSH handles them natively

@@ -5,9 +5,9 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const project = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const temp = mkdtempSync(join(tmpdir(), 'dsh-drag-file-preview-'))
+const temp = mkdtempSync(join(tmpdir(), 'dsh-dragview-'))
 
-const PLUGIN_ID = 'dsh-drag-file-preview'
+const PLUGIN_ID = 'dsh-dragview'
 
 function runEsbuild(entry, outfile, { format, platform, external, banner, footer, globalName } = {}) {
   buildSync({

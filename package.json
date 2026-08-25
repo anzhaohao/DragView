@@ -1,5 +1,5 @@
 {
-  "name": "dsh-drag-file-preview",
+  "name": "dsh-dragview",
   "version": "0.1.0",
   "description": "DragView：为 DeepSeek Harness 提供拖拽文件、Codex 风格附件卡片、安全文件预览与系统打开能力",
   "keywords": [
@@ -22,11 +22,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anzhaohao/dsh-drag-file-preview.git"
+    "url": "git+https://github.com/anzhaohao/DragView.git"
   },
-  "homepage": "https://github.com/anzhaohao/dsh-drag-file-preview#readme",
+  "homepage": "https://github.com/anzhaohao/DragView#readme",
   "bugs": {
-    "url": "https://github.com/anzhaohao/dsh-drag-file-preview/issues"
+    "url": "https://github.com/anzhaohao/DragView/issues"
   },
   "type": "module",
   "main": "./src/index.js",
