@@ -24,6 +24,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Check out the side-chat integration contract
+        uses: actions/checkout@v4
+        with:
+          repository: anzhaohao/dsh-side-chat-plus-plus
+          path: .ci/dsh-side-chat
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
@@ -34,4 +39,6 @@ jobs:
         run: git diff --exit-code -- src/client.js src/index.js src/file-access.js src/side-chat-bridge.js src/fingerprint.js src/client-fingerprint.js src/client-export-bridge.js src/client/rail-fixture.js src/client/preview-fixture.js
       - run: npm run check
       - run: npm test
+        env:
+          DSH_SIDE_CHAT_REPO: ${{ github.workspace }}/.ci/dsh-side-chat
       - run: npm pack --dry-run

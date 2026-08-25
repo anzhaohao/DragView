@@ -25,6 +25,9 @@ import { createSideChatExportRegistrar } from '../src/side-chat-bridge.js'
 import { acknowledgeRegisteredExport, DRAG_FILE_BRIDGE_VERSION } from '../src/client-export-bridge.js'
 
 const project = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const sideChatProject = process.env.DSH_SIDE_CHAT_REPO
+  ? resolve(process.env.DSH_SIDE_CHAT_REPO)
+  : join(project, '..', '20260822-dsh-side-chat++')
 const scratch = await mkdtemp(join(tmpdir(), 'dsh-drag-file-security-'))
 
 try {
@@ -285,8 +288,8 @@ try {
   assert.match(client, /sendBeacon/)
   assert.match(client, /keepalive/)
 
-  const sideAdapter = await readFile(join(project, '..', '20260822-dsh-side-chat++', 'src', 'client', 'rc6', 'sessions-adapter.ts'), 'utf8')
-  const sideExportBridge = await readFile(join(project, '..', '20260822-dsh-side-chat++', 'src', 'client', 'rc6', 'export-bridge.ts'), 'utf8')
+  const sideAdapter = await readFile(join(sideChatProject, 'src', 'client', 'rc6', 'sessions-adapter.ts'), 'utf8')
+  const sideExportBridge = await readFile(join(sideChatProject, 'src', 'client', 'rc6', 'export-bridge.ts'), 'utf8')
   assert.match(sideAdapter, /dispatchDragFileAttachment\(window, parentSessionId, attachment\)/)
   assert.match(sideExportBridge, /detail:\s*attachment/)
   assert.doesNotMatch(`${sideAdapter}\n${sideExportBridge}`, /detail:\s*\{[^}]*(?:text:|path:\s*savedPath)/)
