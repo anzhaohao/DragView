@@ -47,7 +47,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "node --check src/client.js && node --check src/index.js && node --check src/file-access.js && node --check src/side-chat-bridge.js && node --check src/fingerprint.js && node --check src/client-fingerprint.js && node --check src/client-export-bridge.js && node --check src/client/rail-fixture.js && node --check src/client/preview-fixture.js",
-    "test": "node scripts/test-security.mjs && node scripts/test-rail-fixture.mjs"
+    "test": "node scripts/test-security.mjs && node scripts/test-rail-fixture.mjs && node scripts/test-package-smoke.mjs",
+    "test:package": "node scripts/test-package-smoke.mjs"
   },
   "dsh": {
     "bundle": {
