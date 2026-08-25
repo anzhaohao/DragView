@@ -22,6 +22,15 @@
 - GitHub Actions 在 Node `22.19.0` 与 `24.x` 上执行 lockfile 安装、build、生成产物无差异、check、test 和 pack dry-run。发布细节见 `docs/RELEASING.md`，版本变化见 `CHANGELOG.md`，私密漏洞报告见 `SECURITY.md`。
 - DSH 市场登记前必须给 GitHub 仓库添加 `dsh-plugin` topic，并重新阅读 `awesome-dsh-plugin/awesome-dsh-plugin` 的当期贡献指南。准备时该市场要求仓库至少 1 天、至少 10 个真实提交；禁止使用空提交、空白提交或人为切碎改动凑门槛。登记文件计划为 `data/plugins/anzhaohao__DragView.yml`，category 为 `ui`，不要手写 `npm:` 字段。
 
+## 2026-08-25 发布完成记录
+
+- npm 已发布 `dsh-dragview@0.1.0`（`latest`），tarball `https://registry.npmjs.org/dsh-dragview/-/dsh-dragview-0.1.0.tgz`；`repository` 指向 `https://github.com/anzhaohao/DragView`，`gitHead=1b320f47`。发布前 `build/check/test` 全绿，`npm pack --dry-run` 为 40 文件 / 90,335 bytes，无秘密/备份/node_modules 混入。
+- GitHub Release `v0.1.0` 已创建并附加预构建 tarball：`https://github.com/anzhaohao/DragView/releases/tag/v0.1.0`；git tag `v0.1.0` 已推送远端。
+- GitHub 仓库已正式命名为 `DragView`，并已添加 `dsh-plugin`、`drag-file`、`drag-and-drop`、`file-preview`、`file-attachment`、`pdf-preview`、`dragview`、`dsh`、`deepseek-harness` 等 topic。
+- DSH 插件市场 PR 已提交：`https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/3186`；登记文件 `data/plugins/anzhaohao__DragView.yml`（category `ui`），README.md / README.zh.md 已用生成器重生成。CI 的「Submission gate」与「check」均通过，等待维护者合并（合并后网站自动重建，无需再动）。
+- 本地 profile 尚未迁移：已安装目录仍是 `node_modules\dsh-drag-file-preview`（`file:` 链接到本地源码目录），插件当前工作正常。切到发布身份 `dsh-dragview` 需把 profile 的 dependency/bundles 键、node_modules 目录与 lockfile 作为一个迁移单元更新，再完整重启 Hana；本步骤尚未执行（重启会中断当前 DSH 会话，交用户或后续会话）。
+- 旧空目录 `D:\Postgraduate_JilinUniversity\03_Sundries\02_DevLab\20260824-dsh-drag-file` 仍被存活的 Codex 进程（`codex.exe` PID 27192）占用句柄，`Remove-Item` 报「being used by another process」；关闭该 Codex 会话后即可删除。
+
 ## 安全不变量
 
 - 预览和系统打开接口不得接受文件路径。
