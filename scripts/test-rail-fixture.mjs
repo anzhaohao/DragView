@@ -8,12 +8,17 @@ const project = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const playwrightRoot = process.env.CODEX_PLAYWRIGHT_ROOT
   ?? join(homedir(), '.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'node', 'node_modules', 'playwright')
 const playwrightEntry = join(playwrightRoot, 'index.mjs')
-await access(playwrightEntry)
-const { chromium } = await import(pathToFileURL(playwrightEntry).href)
-const edge = process.env.DSH_EDGE_PATH ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
-await access(edge)
+const { chromium } = await access(playwrightEntry)
+  .then(() => import(pathToFileURL(playwrightEntry).href))
+  .catch(() => import('playwright-core'))
+const browserExecutable = process.env.DSH_BROWSER_PATH
+  ?? process.env.DSH_EDGE_PATH
+  ?? (process.platform === 'win32'
+    ? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+    : '/usr/bin/google-chrome')
+await access(browserExecutable)
 
-const browser = await chromium.launch({ executablePath: edge, headless: true })
+const browser = await chromium.launch({ executablePath: browserExecutable, headless: true })
 try {
   const page = await browser.newPage()
   await page.setContent(`<!doctype html><style>

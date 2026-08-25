@@ -40,5 +40,6 @@ jobs:
       - run: npm run check
       - run: npm test
         env:
+          DSH_BROWSER_PATH: /usr/bin/google-chrome
           DSH_SIDE_CHAT_REPO: ${{ github.workspace }}/.ci/dsh-side-chat
       - run: npm pack --dry-run
