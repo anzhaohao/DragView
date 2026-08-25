@@ -2,6 +2,16 @@
 
 All notable changes to DragView are documented here. The project follows Semantic Versioning.
 
+## 0.1.1 - 2026-08-25
+
+### Added
+
+- Sent-message file cards: `@"path"` references in the conversation now render as the same Codex-style card shown in the composer (icon tile + name + type/size), and remain clickable for in-app preview or system-default open.
+
+### Changed
+
+- Attachments are no longer revoked on send; their tokens stay live (still session-bound, 4 h TTL, identity-revalidated) so the sent cards can keep previewing. Tokens are revoked on card removal, page hide, and plugin unload as before.
+
 ## 0.1.0 - 2026-08-25
 
 Initial public release.

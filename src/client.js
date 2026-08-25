@@ -447,6 +447,7 @@ function wireAttachmentCardActions(main, remove, onActivate, onRemove) {
 
 // src/client/pills.ts
 var fileQueue = [];
+var sentRefs = /* @__PURE__ */ new Map();
 var onChange = null;
 var onDispose = null;
 var activeSession = null;
@@ -482,14 +483,23 @@ function removePill(id) {
   changed();
 }
 function clearPills(sessionId) {
-  const removed = sessionId === void 0 ? fileQueue.splice(0) : fileQueue.filter((item) => item.sessionId === sessionId);
-  if (sessionId !== void 0) {
+  if (sessionId === void 0) {
+    fileQueue.splice(0);
+  } else {
     for (let index = fileQueue.length - 1; index >= 0; index -= 1) {
       if (fileQueue[index].sessionId === sessionId) fileQueue.splice(index, 1);
     }
   }
-  if (removed.length > 0) onDispose?.(removed);
   changed();
+}
+function rememberSentPills(pills) {
+  for (const pill of pills) sentRefs.set(pill.ref, pill);
+}
+function sentPillForPath(path) {
+  return sentRefs.get(path);
+}
+function sentRefsList() {
+  return [...sentRefs.values()];
 }
 function pillsList(sessionId) {
   return sessionId === void 0 ? fileQueue : fileQueue.filter((item) => item.sessionId === sessionId);
@@ -648,6 +658,84 @@ function mountPillRail() {
 }
 function refreshPills() {
   changed();
+}
+
+// src/client/refchip.ts
+var ENHANCED_ATTR = "data-drag-file-enhanced";
+function pathFromRefChip(chip) {
+  const title = chip.getAttribute("title") ?? "";
+  return title.slice(1).replace(/^"|"$/g, "");
+}
+function enhanceRefChip(chip) {
+  if (chip.hasAttribute(ENHANCED_ATTR)) return;
+  chip.setAttribute(ENHANCED_ATTR, "1");
+  chip.classList.add("dsh-drag-file-sent");
+  const pill = sentPillForPath(pathFromRefChip(chip));
+  const name = pill?.name ?? ((chip.textContent ?? "").trim() || "\u6587\u4EF6");
+  const tile = fileIconElement(name);
+  const copy = document.createElement("span");
+  copy.className = "dsh-drag-file-copy";
+  const nameEl = document.createElement("span");
+  nameEl.className = "dsh-drag-file-name";
+  nameEl.textContent = name;
+  nameEl.title = name;
+  const meta = document.createElement("span");
+  meta.className = "dsh-drag-file-meta";
+  meta.textContent = pill ? `${pill.typeLabel} \xB7 ${pill.formattedSize}` : "\u6587\u4EF6 \xB7 \u5927\u5C0F\u672A\u77E5";
+  copy.append(nameEl, meta);
+  chip.replaceChildren(tile, copy);
+  chip.removeAttribute("title");
+  if (pill === void 0) return;
+  chip.setAttribute("data-preview-kind", pill.previewKind);
+  chip.setAttribute("role", "button");
+  chip.setAttribute("tabindex", "0");
+  chip.setAttribute("aria-label", `${pill.name}\uFF0C${pill.typeLabel}\uFF0C${pill.formattedSize}`);
+  const activate = () => {
+    activateAttachment(pill, chip);
+  };
+  chip.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    activate();
+  });
+  chip.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      activate();
+    }
+  });
+}
+function enhanceRefChipsIn(root) {
+  root.querySelectorAll('[data-ref-chip="file"]').forEach((node) => enhanceRefChip(node));
+}
+function injectRefChipStyle() {
+  if (document.getElementById("dsh-drag-file-refchip-style")) return;
+  const style = document.createElement("style");
+  style.id = "dsh-drag-file-refchip-style";
+  style.textContent = `
+[data-ref-chip="file"].dsh-drag-file-sent{display:inline-flex;align-items:center;gap:10px;box-sizing:border-box;max-width:min(280px,100%);min-width:0;padding:5px 12px 5px 5px;border:1px solid var(--dsw-alias-border-l2,var(--dsh-drag-border));border-radius:14px;background:var(--dsw-alias-bg-layer-3,var(--dsh-drag-bg));color:var(--dsw-alias-label-primary,var(--dsh-drag-text));vertical-align:middle;white-space:nowrap;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+[data-ref-chip="file"].dsh-drag-file-sent[role="button"]{cursor:pointer}
+[data-ref-chip="file"].dsh-drag-file-sent[role="button"]:hover{background:var(--dsw-alias-interactive-bg-hover,var(--dsh-drag-bg-subtle));border-color:var(--dsw-alias-border-l4,var(--dsh-drag-border))}
+[data-ref-chip="file"].dsh-drag-file-sent[role="button"]:focus-visible{outline:2px solid var(--dsw-alias-border-l4,#5b8def);outline-offset:1px}
+[data-ref-chip="file"].dsh-drag-file-sent .dsh-drag-file-copy{flex:1;min-width:0}
+[data-ref-chip="file"].dsh-drag-file-sent .dsh-drag-file-icon{flex:none}
+`;
+  document.head.append(style);
+}
+function startRefChipObserver() {
+  injectRefChipStyle();
+  enhanceRefChipsIn(document);
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof HTMLElement)) continue;
+        if (node.matches('[data-ref-chip="file"]')) enhanceRefChip(node);
+        else node.querySelectorAll('[data-ref-chip="file"]').forEach((chip) => enhanceRefChip(chip));
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => observer.disconnect();
 }
 
 // src/client/settings-section.tsx
@@ -966,6 +1054,7 @@ ${cleanText}`;
     const result = await session.prompt?.(content, mode, signal);
     if (!result?.ok) return { kind: "error" };
     if (typeof controller.releaseDraftImages === "function") controller.releaseDraftImages(attachments);
+    rememberSentPills(queued);
     clearPills(sessionId);
     return { kind: "success" };
   };
@@ -1053,6 +1142,7 @@ function apply(ctx) {
   setActiveSessionProvider(() => currentSessionId(ctx.sessions));
   const disposeRail = mountPillRail();
   const disposeStyle = injectRailStyle();
+  const disposeRefChips = startRefChipObserver();
   setPillChangeListener(() => syncDraftSentinel(ctx));
   const revokeTokens = (items, keepalive = false) => {
     if (items.length === 0) return;
@@ -1073,7 +1163,7 @@ function apply(ctx) {
     }
   };
   setPillDisposeListener((items) => revokeTokens(items));
-  const onPageHide = () => revokeTokens(fileQueue, true);
+  const onPageHide = () => revokeTokens([...fileQueue, ...sentRefsList()], true);
   window.addEventListener("pagehide", onPageHide);
   const sessionList = ctx.sessions.list;
   const disposeSessionListener = sessionList.subscribe?.(() => {
@@ -1106,11 +1196,12 @@ function apply(ctx) {
     window.removeEventListener("drop", onDrop, true);
     window.removeEventListener("pagehide", onPageHide);
     overlay.dispose();
-    revokeTokens(fileQueue, true);
+    revokeTokens([...fileQueue, ...sentRefsList()], true);
     setPillDisposeListener(null);
     clearPills();
     disposeRail();
     disposeStyle();
+    disposeRefChips();
     setPillChangeListener(null);
     setActiveSessionProvider(null);
     disposeSessionListener();

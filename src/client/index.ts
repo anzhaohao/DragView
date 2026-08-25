@@ -42,11 +42,14 @@ import {
   mountPillRail,
   pillsList,
   refreshPills,
+  rememberSentPills,
+  sentRefsList,
   setActiveSessionProvider,
   setPillChangeListener,
   setPillDisposeListener,
 } from './pills.js'
 import { closeActivePreview, notifyUser } from './preview.js'
+import { startRefChipObserver } from './refchip.js'
 import { DragFileSettingsSection } from './settings-section.js'
 import { acknowledgeRegisteredExport, DRAG_FILE_BRIDGE_VERSION } from './export-bridge.js'
 
@@ -245,6 +248,7 @@ function patchSendSession(ctx: ClientContext, conversation: unknown): void {
       .prompt?.(content, mode, signal)
     if (!result?.ok) return { kind: 'error' }
     if (typeof controller.releaseDraftImages === 'function') controller.releaseDraftImages(attachments)
+    rememberSentPills(queued) // path → pill, so post-send refChips stay card-like + previewable
     clearPills(sessionId) // only on success — a failed send keeps the pills
     return { kind: 'success' }
   }
@@ -350,6 +354,7 @@ export function apply(ctx: ClientContext): void {
   setActiveSessionProvider(() => currentSessionId(ctx.sessions))
   const disposeRail = mountPillRail()
   const disposeStyle = injectRailStyle()
+  const disposeRefChips = startRefChipObserver()
   setPillChangeListener(() => syncDraftSentinel(ctx))
   const revokeTokens = (items: readonly { readonly id: string; readonly sessionId: string }[], keepalive = false): void => {
     if (items.length === 0) return
@@ -367,7 +372,7 @@ export function apply(ctx: ClientContext): void {
     }
   }
   setPillDisposeListener((items) => revokeTokens(items))
-  const onPageHide = (): void => revokeTokens(fileQueue, true)
+  const onPageHide = (): void => revokeTokens([...fileQueue, ...sentRefsList()], true)
   window.addEventListener('pagehide', onPageHide)
 
   const sessionList = ctx.sessions.list as unknown as { subscribe?: (listener: () => void) => (() => void) }
@@ -406,11 +411,12 @@ export function apply(ctx: ClientContext): void {
     window.removeEventListener('drop', onDrop, true)
     window.removeEventListener('pagehide', onPageHide)
     overlay.dispose()
-    revokeTokens(fileQueue, true)
+    revokeTokens([...fileQueue, ...sentRefsList()], true)
     setPillDisposeListener(null)
     clearPills()
     disposeRail()
     disposeStyle()
+    disposeRefChips()
     setPillChangeListener(null)
     setActiveSessionProvider(null)
     disposeSessionListener()

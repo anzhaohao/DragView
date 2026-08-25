@@ -1,6 +1,6 @@
 {
   "name": "dsh-dragview",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DragView：为 DeepSeek Harness 提供拖拽文件、Codex 风格附件卡片、安全文件预览与系统打开能力",
   "keywords": [
     "deepseek-harness",

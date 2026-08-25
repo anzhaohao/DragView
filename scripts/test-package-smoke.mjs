@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 
 const PACKAGE_NAME = 'dsh-dragview'
 const project = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const EXPECTED_VERSION = JSON.parse(readFileSync(join(project, 'package.json'), 'utf8')).version
 const scratch = mkdtempSync(join(tmpdir(), 'dsh-dragview-package-smoke-'))
 const npmExecPath = process.env.npm_execpath
 
@@ -39,7 +40,7 @@ try {
   const packOutput = runNpm(['pack', '--json', '--pack-destination', packDirectory], project)
   const [packResult] = JSON.parse(packOutput)
   assert.equal(packResult.name, PACKAGE_NAME)
-  assert.equal(packResult.version, '0.1.0')
+  assert.equal(packResult.version, EXPECTED_VERSION)
 
   const packedPaths = new Set(packResult.files.map(({ path }) => path.replaceAll('\\', '/')))
   for (const required of [
@@ -72,7 +73,7 @@ try {
   const installedRoot = join(consumer, 'node_modules', PACKAGE_NAME)
   const manifest = JSON.parse(readFileSync(join(installedRoot, 'package.json'), 'utf8'))
   assert.equal(manifest.name, PACKAGE_NAME)
-  assert.equal(manifest.version, '0.1.0')
+  assert.equal(manifest.version, EXPECTED_VERSION)
   assert.deepEqual(manifest.exports, {
     '.': './src/index.js',
     './client': './src/client.js',

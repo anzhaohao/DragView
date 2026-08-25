@@ -23,6 +23,10 @@ export interface Pill {
 }
 
 export const fileQueue: Pill[] = []
+/** Sent-reference registry keyed by canonical path: keeps the fileId + metadata
+ *  alive after a successful send so the message-body `@"path"` refChip can be
+ *  upgraded to the same Codex-style card and still preview/open via its token. */
+const sentRefs = new Map<string, Pill>()
 let onChange: (() => void) | null = null
 let onDispose: ((items: readonly Pill[]) => void) | null = null
 let activeSession: (() => string | undefined) | null = null
@@ -58,14 +62,33 @@ export function removePill(id: string): void {
 }
 
 export function clearPills(sessionId?: string): void {
-  const removed = sessionId === undefined ? fileQueue.splice(0) : fileQueue.filter((item) => item.sessionId === sessionId)
-  if (sessionId !== undefined) {
+  // Clears the composer queue only — it does NOT dispose/revoke tokens. After a
+  // successful send the tokens must stay live so the message-body refChips can
+  // still preview/open. Callers that need revocation (removePill / lifecycle
+  // teardown) do it explicitly.
+  if (sessionId === undefined) {
+    fileQueue.splice(0)
+  } else {
     for (let index = fileQueue.length - 1; index >= 0; index -= 1) {
       if (fileQueue[index].sessionId === sessionId) fileQueue.splice(index, 1)
     }
   }
-  if (removed.length > 0) onDispose?.(removed)
   changed()
+}
+
+/** Keep sent attachments (path → pill) so post-send refChips stay card-like and
+ *  clickable. Memory-only: after a page reload the history chips degrade to the
+ *  platform's plain refChip. */
+export function rememberSentPills(pills: readonly Pill[]): void {
+  for (const pill of pills) sentRefs.set(pill.ref, pill)
+}
+
+export function sentPillForPath(path: string): Pill | undefined {
+  return sentRefs.get(path)
+}
+
+export function sentRefsList(): readonly Pill[] {
+  return [...sentRefs.values()]
 }
 
 export function pillsList(sessionId?: string): readonly Pill[] {
