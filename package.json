@@ -64,5 +64,8 @@
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
   },
+  "devDependencies": {
+    "esbuild": "0.25.9"
+  },
   "license": "MIT"
 }

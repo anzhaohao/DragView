@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { buildSync } from 'esbuild'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -9,31 +9,22 @@ const temp = mkdtempSync(join(tmpdir(), 'dsh-drag-file-preview-'))
 
 const PLUGIN_ID = 'dsh-drag-file-preview'
 
-function quote(value) {
-  return `"${value.replaceAll('"', '""')}"`
-}
-
 function runEsbuild(entry, outfile, { format, platform, external, banner, footer, globalName } = {}) {
-  const args = [
-    'npx.cmd',
-    '--yes',
-    'esbuild@0.25.9',
-    quote(entry),
-    '--bundle',
-    quote(`--format=${format}`),
-    quote(`--platform=${platform}`),
-    '--target=es2022',
-    '--jsx=automatic',
-    '--loader:.tsx=tsx',
-    '--loader:.ts=ts',
-    '--loader:.css=text',
-    ...(globalName ? [quote(`--global-name=${globalName}`)] : []),
-    ...(external ?? []).map((value) => quote(`--external:${value}`)),
-    ...(banner ? [quote(`--banner:js=${banner}`)] : []),
-    ...(footer ? [quote(`--footer:js=${footer}`)] : []),
-    quote(`--outfile=${outfile}`),
-  ].join(' ')
-  execSync(args, { cwd: project, stdio: 'inherit', shell: true })
+  buildSync({
+    absWorkingDir: project,
+    entryPoints: [entry],
+    outfile,
+    bundle: true,
+    format,
+    platform,
+    target: 'es2022',
+    jsx: 'automatic',
+    loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'text' },
+    external: external ?? [],
+    ...(globalName ? { globalName } : {}),
+    ...(banner ? { banner: { js: banner } } : {}),
+    ...(footer ? { footer: { js: footer } } : {}),
+  })
 }
 
 try {
