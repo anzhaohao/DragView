@@ -89,6 +89,12 @@ npm test               # token/路径约束/Range/MIME/open argv/side 内容桥�
 
 这些是有意保留的协议名，不表示仍需安装旧 npm 包。
 
+## 发布与安全
+
+- 版本变化见 [`CHANGELOG.md`](./CHANGELOG.md)。
+- 私密漏洞报告与支持范围见 [`SECURITY.md`](./SECURITY.md)。
+- 维护者发布、部署和 DSH 市场提交流程见 [`docs/RELEASING.md`](./docs/RELEASING.md)。
+
 ## 设置
 
 DSH 设置里新增 `drag-file` 分区：

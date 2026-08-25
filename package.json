@@ -39,8 +39,11 @@
   "files": [
     "src",
     "scripts",
+    "docs/RELEASING.md",
     "cordis.patch.yml",
     "README.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
     "LICENSE",
     "NOTICE"
   ],

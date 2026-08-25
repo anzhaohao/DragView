@@ -13,12 +13,14 @@
 
 ## DragView 改名与发布交接
 
-- 展示品牌已改为 **DragView**，公开 npm 包、GitHub 仓库、DSH 注入包名统一为 `dsh-drag-file-preview`。当前本地仓库为 `D:\Postgraduate_JilinUniversity\03_Sundries\02_DevLab\20260824-dsh-drag-file-preview`。旧顶层目录因当前 Codex cwd 占用仅剩空壳，任务关闭、句柄释放后可删除。
-- GitHub 仓库已改名为 `https://github.com/anzhaohao/dsh-drag-file-preview`，本地 `origin` 已更新；旧 URL 由 GitHub 重定向。npm 上的 `dsh-drag-file` 属于其他维护者，不得将它当作 DragView 的别名或发布目标；npm 不支持包别名。
+- 用户于 2026-08-25 确认最终公开身份：展示品牌与 GitHub 仓库名为 **DragView**，npm/DSH 包名与客户端 module-loader ID 为 `dsh-dragview`，首发版本为 `0.1.0`。源码元数据已指向 `https://github.com/anzhaohao/DragView`；执行发布的人仍需先完成 GitHub 仓库改名并核对远端，不能把源码声明误当成云端已经改名。
+- 当前本地仓库目录仍为 `D:\Postgraduate_JilinUniversity\03_Sundries\02_DevLab\20260824-dsh-drag-file-preview`，仅目录名尚未迁移，不影响 npm 身份。npm 上的 `dsh-drag-file` 属于其他维护者，不得将它当作 DragView 的别名或发布目标；npm 不支持包别名。
 - 兼容层故意保留：`dsh-drag-file:add-pill`、`settingsNamespace('drag-file')`、设置/Cordis ID `drag-file`、`dshDragFileHost`、`/file-drop/*`、`dsh-drag-file-*` DOM/CSS/data/header 标识。side-chat 仍使用 v2 ACK，未安装或未 ACK 时仍走 native reference fallback；不得让 side-chat import DragView 包。
-- 部署改名已完成：当前安装目录为 `node_modules\dsh-drag-file-preview`，旧 `node_modules\dsh-drag-file` 已不存在；profile dependency/inject 与 lockfile 已同步新包名。后续仍必须先备份再从源码构建同步，不直接在 profile 内开发。
+- 2026-08-25 首发准备时，已安装 profile 仍是上一阶段的 `node_modules\dsh-drag-file-preview`。发布执行者必须先备份安装目录、profile package/lockfile 与 Cordis patch，再把依赖、注入名和目录作为一个迁移单元切换到 `dsh-dragview`；不得只重命名文件夹，也不得直接在 profile 内开发。
 - 回滚时必须将安装目录、profile dependency/inject 项和 lockfile 一起恢复，然后完整重启 Hana；仅改回文件夹名会造成 Cordis 指向不一致。
-- 改名后仍必须在 drag 仓库执行 `npm run build && npm run check && npm test && npm pack --dry-run --json`，在 side-chat 仓库执行 `npm run build && npm run check && npm test`，最后对两仓库执行 `git diff --check`。
+- 首发构建已固定使用 lockfile 中的 `esbuild@0.25.9`，`scripts/build.mjs` 直接调用 esbuild JS API，不再通过 `npx --yes`、`npx.cmd` 或 `shell: true`。标准门禁为 `npm ci && npm run build && npm run check && npm test && npm pack --dry-run --json`；`npm test` 包含真实 tgz 安装 smoke test，会核对 exports、`dsh.bundle`、Cordis 包名、client loader ID 和发布文件。
+- GitHub Actions 在 Node `22.19.0` 与 `24.x` 上执行 lockfile 安装、build、生成产物无差异、check、test 和 pack dry-run。发布细节见 `docs/RELEASING.md`，版本变化见 `CHANGELOG.md`，私密漏洞报告见 `SECURITY.md`。
+- DSH 市场登记前必须给 GitHub 仓库添加 `dsh-plugin` topic，并重新阅读 `awesome-dsh-plugin/awesome-dsh-plugin` 的当期贡献指南。准备时该市场要求仓库至少 1 天、至少 10 个真实提交；禁止使用空提交、空白提交或人为切碎改动凑门槛。登记文件计划为 `data/plugins/anzhaohao__DragView.yml`，category 为 `ui`，不要手写 `npm:` 字段。
 
 ## 安全不变量
 
@@ -35,6 +37,7 @@
 ## 验证与交接
 
 - 本地回归入口：`npm run build && npm run check && npm test`。
+- 2026-08-25 首发准备门禁在 Node `24.15.0` / npm `11.12.1` 上通过：`npm ci --ignore-scripts`、两次 build 的 9 个生成文件 SHA-256 完全一致、check、security/UI、rail/preview、真实 tgz 安装 smoke、`npm pack --dry-run --json` 与 `git diff --check` 均 exit 0。dry-run 产物为 `dsh-dragview-0.1.0.tgz`，90,239 bytes、解包 349,500 bytes、40 个文件；smoke 使用临时目录生成并安装 tgz 后自动清理，没有在仓库留下归档。Node 22.19 的验证交给新增 CI matrix，在 CI 实际跑绿前不得声称该平台已通过。
 - 安全测试覆盖 token 生命周期/身份变化、路径穿越与 symlink/junction、Range 206/416 解析、MIME 分类、系统打开 argv、opaque resolver 与 host-registered capability bridge。
 - DragView 与 side-chat 均已完成 `npm run build`、`npm run check`、`npm test`，全部 exit 0；两仓库 `git diff --check` exit 0。DragView 测试覆盖 safe transactional settings、token、Range、safe open、bridge 与 rail/preview；side-chat 覆盖 boundary 5/5、close-loop 10/10 与 export bridge。提交前 DragView 的 31 个预期文件已精确暂存，暂存差异、whitespace 与安全门禁均已通过；本文档不预写尚未生成的提交 SHA。
 - 已完成正式备份、产物部署、Hana 完整重启和真实 DSH 验收；详细数据见下方“最终部署与真实验收”。
@@ -56,7 +59,7 @@ Node 的跨平台文件 API 没有在此插件中提供可移植的 `openat`/目
 
 预览与文本读取保持在已验证的 FileHandle 上，避免复核后再按路径重新读取。system-open 必须关闭复核句柄后交给 Explorer/操作系统，因此在该交接点仍存在无法完全消除的极窄路径替换竞态；这属于明确的 OS 边界，不能描述为已彻底消除。
 
-## 最终部署与真实验收（2026-08-24）
+## 最终部署与真实验收（2026-08-24，上一包名阶段的历史记录）
 
 ### 备份、部署与进程
 
