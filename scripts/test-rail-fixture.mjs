@@ -239,7 +239,7 @@ try {
     }
     window.openFixturePreview()
   })
-  await page.locator('.dsh-drag-file-preview-panel').click({ position: { x: 20, y: 20 } })
+  await page.locator('.dsh-drag-file-preview-panel').dispatchEvent('click')
   assert.equal(await page.locator('[data-drag-file-preview]').count(), 1, 'clicking inside the panel must not close the preview')
   await page.mouse.click(5, 5)
   await page.locator('[data-drag-file-preview]').waitFor({ state: 'detached' })
